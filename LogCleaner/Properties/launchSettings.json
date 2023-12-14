@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "WSL": {
+      "commandName": "WSL2"
+    },
+    "LogCleaner": {
+      "commandName": "Project",
+      "commandLineArgs": "-p K:\\DesenvolvimentoGit\\ms_ctb -r true -d 2"
+    }
+  }
+}
