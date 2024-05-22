@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection.Emit;
 
 namespace ConsoleApp1;
 
@@ -16,7 +17,7 @@ internal class Program
         [Option('r', "readkey", Required = false, HelpText = "Awaits a key to be pressed to exit (to run inside VS)")]
         public bool ReadKey { get; set; }
 
-        [Option('d', "daysToKeep", Required = false, HelpText = "Quantidade de dias para manter os logs mais recentes")]
+        [Option('d', "daysToKeep", Required = false, HelpText = "How many days from today to keep log folders/files")]
         public int DaysToKeep { get; set; } = 0;
     }
 
@@ -34,7 +35,7 @@ internal class Program
                        Console.WriteLine($"{parsedArgs.Path} doesn't exists.");
                        return;
                    }
-                   if(parsedArgs.DaysToKeep == 0)
+                   if (parsedArgs.DaysToKeep == 0)
                    {
                        Console.ForegroundColor = ConsoleColor.White;
                        Console.WriteLine($"DaysToKeep not specified or invalid. Using standard 7");
@@ -83,32 +84,28 @@ internal class Program
 
     private static void SearchLogs(DirectoryInfo directoryInfo, int level, int daysToKeep)
     {
-        if (level > 128)
+        if (level > 8)
         {
             return;
         }
         Console.ForegroundColor = ConsoleColor.DarkGreen;
         Console.WriteLine($"{"".PadLeft(level * 2)} Searching {directoryInfo.FullName}...");
-        if (directoryInfo.Name.StartsWith("log", StringComparison.CurrentCultureIgnoreCase))
+
+        List<DirectoryInfo> listaFisica = directoryInfo.GetDirectories()
+            .Where(d => !d.Attributes.HasFlag(FileAttributes.Hidden | FileAttributes.System | FileAttributes.ReadOnly) &&
+            !d.Name.StartsWith('.') &&
+            !d.Name.StartsWith("obj")).ToList();
+        for (int i = 0; i < listaFisica.Count; i++)
         {
-            CleanLogs(directoryInfo, level + 1, daysToKeep);
-        }
-        else
-        {
-            foreach (var dir in directoryInfo.GetDirectories()
-                .Where(d => !d.Attributes.HasFlag(FileAttributes.Hidden| FileAttributes.System | FileAttributes.ReadOnly) &&
-                !d.Name.StartsWith('.') &&
-                !d.Name.StartsWith("obj")))
+            try
             {
-                try
-                {
-                    SearchLogs(dir, level + 1, daysToKeep);
-                }
-                catch (Exception ex)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"{dir.FullName} EXCEPTION {ex.Message}");
-                }
+                SearchLogs(listaFisica[i], level + 1, daysToKeep);
+                CleanLogs(listaFisica[i], level + 1, daysToKeep);
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"SEARCH {listaFisica[i].FullName} EXCEPTION {ex.Message}");
             }
         }
     }
@@ -136,7 +133,30 @@ internal class Program
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"{dirs[i].FullName} EXCEPTION {ex.Message}");
+                Console.WriteLine($"CLEAN DIR {dirs[i].FullName} EXCEPTION {ex.Message}");
+            }
+        }
+        var files = directoryLogs.GetFiles("*.txt");
+        for (int i = 0; i < files.Length; i++)
+        {
+            try
+            {
+                if (files[i].LastWriteTime.Date < DateTime.Now.Date.AddDays(-daysToKeep))
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine($"{"".PadLeft(level * 2)} Cleaning File {files[i].FullName}...");
+                    File.Delete(files[i].FullName);
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Gray;
+                    Console.WriteLine($"{"".PadLeft(level * 2)} Skipping Cleaning File {files[i].FullName}...");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"CLEAN FILE {files[i].FullName} EXCEPTION {ex.Message}");
             }
         }
     }
@@ -144,8 +164,17 @@ internal class Program
     private static bool ShouldDelete(string dirName, string dataCorte)
     {
         //Remove non digits from dirName as Span
-        var spDir = dirName.AsSpan()[dirName.IndexOf('2')..];
-        if(spDir.Length < 6)
+        int ixStartYear = dirName.IndexOf('2');
+        if (ixStartYear < 0)
+        {
+            return false;
+        }
+        if (dirName.Length < ixStartYear + 6)
+        {
+            return false;
+        }
+        var spDir = dirName.AsSpan()[ixStartYear..];
+        if (spDir.Length < 6)
         {
             return false;
         }
@@ -153,5 +182,4 @@ internal class Program
 
         return MemoryExtensions.CompareTo(spDir, spData, StringComparison.InvariantCultureIgnoreCase) < 0;
     }
-    
 }

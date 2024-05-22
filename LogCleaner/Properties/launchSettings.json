@@ -5,7 +5,7 @@
     },
     "LogCleaner": {
       "commandName": "Project",
-      "commandLineArgs": "-p K:\\DesenvolvimentoGit\\ms_ctb -r true -d 2"
+      "commandLineArgs": "-p K:\\Develop\\LogCleaner\\LogCleaner\\bin\\Debug\\net8.0-windows\\Logs -r true -d 2"
     }
   }
 }
