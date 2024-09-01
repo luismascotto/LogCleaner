@@ -84,7 +84,7 @@ internal class Program
 
     private static void SearchLogs(DirectoryInfo directoryInfo, int level, int daysToKeep)
     {
-        if (level > 8)
+        if (level > 4)
         {
             return;
         }
@@ -136,8 +136,12 @@ internal class Program
                 Console.WriteLine($"CLEAN DIR {dirs[i].FullName} EXCEPTION {ex.Message}");
             }
         }
-        var files = directoryLogs.GetFiles("*.txt");
-        for (int i = 0; i < files.Length; i++)
+        if (!directoryLogs.FullName.Contains("LOG", StringComparison.InvariantCultureIgnoreCase))
+        {
+            return;
+        }
+        var files = directoryLogs.GetFiles().Where(x => x.Extension is ".txt" or ".log").ToList();
+        for (int i = 0; i < files.Count; i++)
         {
             try
             {
