@@ -32,7 +32,7 @@ internal class Program
                    if (!Directory.Exists(parsedArgs.Path))
                    {
                        Console.ForegroundColor = ConsoleColor.Red;
-                       Console.WriteLine($"{parsedArgs.Path} doesn't exists.");
+                       Console.WriteLine($"{parsedArgs.Path} doesn't exist.");
                        return;
                    }
                    if (parsedArgs.DaysToKeep == 0)
